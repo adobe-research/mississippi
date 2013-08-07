@@ -4,6 +4,20 @@ Mississippi is a Python package that runs batch jobs in the Amazon Web Services 
 
 The goal of Mississippi is to provide a lightweight and robust execution service for batch jobs that is easy to use and does not require advanced knowledge about AWS. Multiple batch jobs can be executed in parallel on a computer cluster of arbitrary size. A batch job can comprise big data tasks that are based on Pig/Hive/Spark/Shark as well as Unix commands and Python scripts.
 
+Requirements
+------------
+Using Mississippi requires setuptools and Boto on your local machine. For Unix systems run:
+```
+#Install setuptools
+curl https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py | python
+
+#Install pip
+sudo easy_install pip
+
+#Install boto
+pip install boto
+```
+
 Install
 -------
 Install from source:
