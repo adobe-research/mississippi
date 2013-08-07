@@ -1,24 +1,4 @@
 #!/usr/bin/env python
-"""
-... 
-"""
-
-###########################################################################
-#                      ADOBE CONFIDENTIAL                                 #
-#                      _ _ _ _ _ _ _ _ _ _                                #
-#                                                                         #
-#  Copyright 2012, Adobe Systems Incorporated                             #
-#  All Rights Reserved.                                                   #
-#                                                                         #
-#  NOTICE: All information contained herein is, and remains the property  #
-#  of Adobe Systems Incorporated and its suppliers, if any. The           #
-#  intellectual and technical concepts contained herein are proprietary   #
-#  to Adobe Systems Incorporated and its suppliers and may be covered by  #
-#  U.S. and Foreign Patents, patents in process, and are protected by     #
-#  trade secret or copyright law.  Dissemination of this information or   #
-#  reproduction of this material is strictly forbidden unless prior       #
-#  written permission is obtained from Adobe Systems Incorporated.        #
-###########################################################################
                    
 import inspect, time
 import ms.filesystem_utils                                            
@@ -34,12 +14,8 @@ from boto.emr.bootstrap_action import BootstrapAction
 __author__ = "Nedim Lipka"  
 __email__  = "lipka@adobe.com"    
 
-def write_script_to_file(script, file):
-    f = open(file, "w")
-    f.write(script)
-    f.close()
-
 class EMRCluster:         
+
 
     def __init__(self, access_key_id, secret_access_key, ec2_keyname, 
                  project_name="Mississippi", bucket=None, emr_keep_alive=False,
@@ -51,7 +27,7 @@ class EMRCluster:
                            '-D','mapred.map.max.attempts=1',
                            '-D','mapred.reduce.tasks.speculative.execution=false',
                            '-D','mapred.map.tasks.speculative.execution=false'],
-                 bootstrap_actions=[BootstrapAction("install-pig","s3://analytics.linuxdag.se/bootstrap-actions/install_pig_0.10.0.sh",None)]):  
+                 bootstrap_actions=[]):  
                 
         self.project_name = project_name
         self.emr_job_id = None
@@ -67,12 +43,12 @@ class EMRCluster:
             bucket = "mississippi-" + access_key_id[0:5]
         bucket = bucket.lower()
         self.__bucket = self.__s3_connection.create_bucket(bucket)
-        self.__mapper = "s3n://" + self.__bucket.name + "/mapper.py",
-        self.__reducer = "s3n://" + self.__bucket.name + "/reducer.py",
-        self.__input = "s3n://" + self.__bucket.name + "/parameters.txt",        
+        self.__mapper = "s3n://" + self.__bucket.name + "/mapper.py"
+        self.__reducer = "s3n://" + self.__bucket.name + "/reducer.py"
+        self.__input = "s3n://" + self.__bucket.name + "/parameters.txt"      
         d = datetime.now().strftime('%Y-%m-%d-%H-%M') 
-        self.__output_folder = "s3n://" + self.__bucket.name + "/logs/" + d + "/ms-out"
-        self.__log_folder = "s3n://" + self.__bucket.name + "/logs/" + d
+        self.__output = "s3n://" + self.__bucket.name + "/outputs/" + d
+        self.__log = "s3n://" + self.__bucket.name + "/logs/" + d
 
         #instances
         self.__master_instance_group = master_instance_group 
@@ -80,6 +56,7 @@ class EMRCluster:
         self.__core_instance_group = core_instance_group
         self.__bootstrap_actions = bootstrap_actions
         self.__job_conf = job_conf
+            
             
     def __build_reducer(self, job):
         """
@@ -92,19 +69,24 @@ class EMRCluster:
         reducer += "\nfor p in sys.stdin:\n    p = p.rstrip()\n    process(p)\n\n"
         return reducer
         
+        
     def __init_src(self, job, parameters):        
-        k = Key(self.__bucket)     
+        k = Key(self.__bucket)    
+         
         #parameters:
         k.key = 'parameters.txt'
-        k.set_contents_from_string(parameters)                
+        k.set_contents_from_string(parameters)    
+                    
         #mapper:
         k.key = 'mapper.py'
         mapper = "#!/usr/bin/env python\nimport sys, os\nfor l in sys.stdin:\n    print l.rstrip()"
-        k.set_contents_from_string(mapper)                
+        k.set_contents_from_string(mapper)    
+                    
         #reducer:      
         k.key = 'reducer.py'
         reducer = self.__build_reducer(job)
         k.set_contents_from_string(reducer)
+
 
     def print_info(self):
         print "\nThe EMR job id is: " + str(self.emr_job_id)
@@ -120,8 +102,10 @@ class EMRCluster:
             print self.emr_state()
             time.sleep(60)
         
+        
     def emr_state(self):
         return self.__emr_connection.describe_jobflow(self.emr_job_id).state  
+    
     
     def emr_masterpublicdnsname(self):
         """
@@ -133,6 +117,7 @@ class EMRCluster:
             return self.__emr_connection.describe_jobflow(self.emr_job_id).masterpublicdnsname
         else:
             return -1          
+           
             
     def run_batch_job(self, job, parameters):
         """
@@ -143,53 +128,26 @@ class EMRCluster:
         :type parameters: str
         :param parameters: A string where each line specifies a set of parameters for a batch job.
         """        
-        self.__init_src(job, parameters)        
+        self.__init_src(job, parameters)   
 
         step_batch_job = StreamingStep(name="distributing and processing",
                            mapper=self.__mapper,
                            reducer=self.__reducer,
                            input=self.__input,
-                           #step_args=self.__job_conf,
-                           output=self.__output_folder)    
+                           step_args=self.__job_conf,
+                           output=self.__output)    
 
         self.emr_job_id = self.__emr_connection.run_jobflow(name=self.project_name,                             
-                            log_uri=self.__log_folder,
+                            log_uri=self.__log,
                             ec2_keyname=self.__ec2_keyname,
                             enable_debugging=True,
-                            #num_instances=3,
                             instance_groups=[InstanceGroup(*self.__master_instance_group), 
                                              InstanceGroup(*self.__task_instance_group), 
                                              InstanceGroup(*self.__core_instance_group)],
-                            ami_version="latest",
                             keep_alive=self.__emr_keep_alive,
-                            #bootstrap_actions=self.__bootstrap_actions,
+                            ami_version="latest",
+                            bootstrap_actions=self.__bootstrap_actions,
                             steps=[step_batch_job]) 
         
         if self.__emr_keep_alive:
             self.__emr_connection.set_termination_protection(self.emr_job_id, True)
-            
-#TODO: Set permissions when copying to S3  
-#Modify the number of nodes and configuration settings in an instance group.
-#add_instance_groups(jobflow_id, instance_groups)
-#run batch job on existing cluster
-
-
-#        step_batch_job = StreamingStep(name="distributing and processing",
-#                           mapper='s3n://elasticmapreduce/samples/wordcount/wordSplitter.py',
-#                           reducer='aggregate',
-#                           input='s3n://elasticmapreduce/samples/wordcount/input',
-#                           #step_args=self.__job_conf,
-#                           output=self.__output_folder)    
-#
-#        self.emr_job_id = self.__emr_connection.run_jobflow(name=self.project_name,                             
-#                            log_uri=self.__log_folder,
-#                            ec2_keyname=self.__ec2_keyname,
-#                            enable_debugging=True,
-#                            #num_instances=3,
-#                            instance_groups=[InstanceGroup(*self.__master_instance_group), 
-#                                             InstanceGroup(*self.__task_instance_group), 
-#                                             InstanceGroup(*self.__core_instance_group)],
-#                            ami_version="latest",
-#                            keep_alive=self.__emr_keep_alive,
-#                            #bootstrap_actions=self.__bootstrap_actions,
-#                            steps=[step_batch_job]) 

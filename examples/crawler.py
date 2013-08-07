@@ -1,6 +1,7 @@
 from ms.mississippi import *
 from my_credentials import *                                            
 
+
 parameters = """www.adobe.com/in/
 labs.adobe.com/
 www.adobe.com/go/flashplayer_security_sk
@@ -103,7 +104,7 @@ forums.adobe.com/community/.../installation_and_update_installation
 bangalorecfug.groups.adobe.com/
 """
 
-#test with cat parameters.txt | python mapper.py | python reducer.py 
+
 def process(parameters):
     tmp = "/tmp/"
     filename = parameters.replace('/','_').replace('.','-')
@@ -112,6 +113,7 @@ def process(parameters):
     cp("file://" + tmp + filename, "s3n://dl-stl-ml-awsdev/download/" + filename)
     rmr("file://" + tmp + filename)
 
-cluster = EMRCluster(my_access_key_id, my_secret_access_key, my_key_pair_name, emr_keep_alive=True)
+
+cluster = EMRCluster(my_access_key_id, my_secret_access_key, my_key_pair_name)
 cluster.run_batch_job(process, parameters)
 cluster.print_info()
