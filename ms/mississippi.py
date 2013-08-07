@@ -71,7 +71,7 @@ class EMRCluster:
         self.__reducer = "s3n://" + self.__bucket.name + "/reducer.py",
         self.__input = "s3n://" + self.__bucket.name + "/parameters.txt",        
         d = datetime.now().strftime('%Y-%m-%d-%H-%M') 
-        self.__output_folder = "s3n://" + self.__bucket.name + "/logs/" + d
+        self.__output_folder = "s3n://" + self.__bucket.name + "/logs/" + d + "/ms-out"
         self.__log_folder = "s3n://" + self.__bucket.name + "/logs/" + d
 
         #instances
@@ -156,6 +156,7 @@ class EMRCluster:
                             log_uri=self.__log_folder,
                             ec2_keyname=self.__ec2_keyname,
                             enable_debugging=True,
+                            #num_instances=3,
                             instance_groups=[InstanceGroup(*self.__master_instance_group), 
                                              InstanceGroup(*self.__task_instance_group), 
                                              InstanceGroup(*self.__core_instance_group)],
@@ -171,3 +172,24 @@ class EMRCluster:
 #Modify the number of nodes and configuration settings in an instance group.
 #add_instance_groups(jobflow_id, instance_groups)
 #run batch job on existing cluster
+
+
+#        step_batch_job = StreamingStep(name="distributing and processing",
+#                           mapper='s3n://elasticmapreduce/samples/wordcount/wordSplitter.py',
+#                           reducer='aggregate',
+#                           input='s3n://elasticmapreduce/samples/wordcount/input',
+#                           #step_args=self.__job_conf,
+#                           output=self.__output_folder)    
+#
+#        self.emr_job_id = self.__emr_connection.run_jobflow(name=self.project_name,                             
+#                            log_uri=self.__log_folder,
+#                            ec2_keyname=self.__ec2_keyname,
+#                            enable_debugging=True,
+#                            #num_instances=3,
+#                            instance_groups=[InstanceGroup(*self.__master_instance_group), 
+#                                             InstanceGroup(*self.__task_instance_group), 
+#                                             InstanceGroup(*self.__core_instance_group)],
+#                            ami_version="latest",
+#                            keep_alive=self.__emr_keep_alive,
+#                            #bootstrap_actions=self.__bootstrap_actions,
+#                            steps=[step_batch_job]) 
