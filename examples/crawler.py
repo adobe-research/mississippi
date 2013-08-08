@@ -114,6 +114,6 @@ def process(parameters):
     rmr("file://" + tmp + filename)
 
 
-cluster = EMRCluster(my_access_key_id, my_secret_access_key, my_key_pair_name)
+cluster = EMRCluster(my_access_key_id, my_secret_access_key, my_key_pair_name, emr_keep_alive=True)
 cluster.run_batch_job(process, parameters)
 cluster.print_info()
