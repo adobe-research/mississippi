@@ -141,9 +141,10 @@ class EMRCluster:
                             log_uri=self.__log,
                             ec2_keyname=self.__ec2_keyname,
                             enable_debugging=True,
-                            instance_groups=[InstanceGroup(*self.__master_instance_group), 
-                                             InstanceGroup(*self.__task_instance_group), 
-                                             InstanceGroup(*self.__core_instance_group)],
+                            num_instances=3
+                            #instance_groups=[InstanceGroup(*self.__master_instance_group), 
+                            #                 InstanceGroup(*self.__task_instance_group), 
+                            #                 InstanceGroup(*self.__core_instance_group)],
                             keep_alive=self.__emr_keep_alive,
                             ami_version="latest",
                             bootstrap_actions=self.__bootstrap_actions,
