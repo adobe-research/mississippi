@@ -141,7 +141,7 @@ class EMRCluster:
                             log_uri=self.__log,
                             ec2_keyname=self.__ec2_keyname,
                             enable_debugging=True,
-                            num_instances=3
+                            num_instances=3,
                             #instance_groups=[InstanceGroup(*self.__master_instance_group), 
                             #                 InstanceGroup(*self.__task_instance_group), 
                             #                 InstanceGroup(*self.__core_instance_group)],
